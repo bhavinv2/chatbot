@@ -1,45 +1,61 @@
-import vertexai  # Import the Vertex AI library for interacting with AI models
-from vertexai.generative_models import GenerativeModel  # Import the GenerativeModel class for chatbot interaction
-import vertexai.preview.generative_models as generative_models  # Import additional generative models for safety settings
+import streamlit as st
+import vertexai  #Vertex AI library for interacting with AI models
+from vertexai.generative_models import GenerativeModel  #for chatbot interaction
+import vertexai.preview.generative_models as generative_models  #safety settings
 
-def start_chat():
-    # Initialize the Vertex AI environment
-    vertexai.init(project="numeric-ion-425514-k6", location="us-central1") #id of project with initial sample code
+# connects the vertex AI environment to GCP project location
+vertexai.init(project="numeric-ion-425514-k6", location="us-central1")
 
-    # Create an instance of the GenerativeModel
-    model = GenerativeModel("gemini-1.5-flash-001")
+# creating specific model
+model = GenerativeModel("gemini-1.0-pro-001")
 
-    # Start the chat session
-    chat = model.start_chat()
 
-    # Define the configuration for generation and safety settings
-    generation_config = {
-        "max_output_tokens": 8192,  # Maximum number of tokens in the generated response
-        "temperature": 1,  # Controls the randomness of the generated response (higher values = more randomness)
-        "top_p": 0.95,  # Controls the diversity of the generated response (higher values = more diverse responses)
-    }
+# start session
+chat = model.start_chat()
 
-    safety_settings = {
-        generative_models.HarmCategory.HARM_CATEGORY_HATE_SPEECH: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,  # Set the safety threshold for hate speech
-        generative_models.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,  # Set the safety threshold for dangerous content
-        generative_models.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,  # Set the safety threshold for sexually explicit content
-        generative_models.HarmCategory.HARM_CATEGORY_HARASSMENT: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,  # Set the safety threshold for harassment
-    }
 
-    # Start chatting
-    while True:
-        user_input = input("You: ")  # Get user input from the command line
+# taken from my vertex ai project
+generation_config = {
+    "max_output_tokens": 8192,  # Maximum number of tokens in the generated response
+    "temperature": 1,  # Controls the randomness of the response (higher value = more random)
+    "top_p": 0.95,  # Controls the diversity of the response (higher value = more diverse)
+}
 
-        # Exit loop if user types 'exit'
-        if user_input.lower() == 'exit':
-            break
 
-        # Send user input to chatbot
-        response = chat.send_message([user_input], generation_config=generation_config, safety_settings=safety_settings)
+safety_settings = {
+    generative_models.HarmCategory.HARM_CATEGORY_HATE_SPEECH: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,  # Block medium and above levels of hate speech
+    generative_models.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,  # Block medium and above levels of dangerous content
+    generative_models.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,  # Block medium and above levels of sexually explicit content
+    generative_models.HarmCategory.HARM_CATEGORY_HARASSMENT: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,  # Block medium and above levels of harassment
+}
 
-        # Extract and print only the text part of the response
-        print("Bot:", response.candidates[0].content.parts[0].text)
 
-# Run the start_chat function if this script is executed directly
-if __name__ == "__main__":
-    start_chat()
+st.title("Chatbot Interface")
+
+#history log
+if 'chat_history' not in st.session_state:
+    st.session_state['chat_history'] = []
+
+
+def get_chat_response(user_input):
+
+    response = chat.send_message([user_input], generation_config=generation_config, safety_settings=safety_settings)
+    # only returns text part of response
+    # return response
+    return response.candidates[0].content.parts[0].text
+
+# text box for user input
+user_input = st.text_input("You:", "")
+
+if st.button("Send"):
+    if user_input:
+
+        response = get_chat_response(user_input)
+        # adds user input and bot response to history
+        st.session_state['chat_history'].append({"user_input": user_input, "chatbot_response": response})
+
+# prints history
+if st.session_state['chat_history']:
+    for message in st.session_state['chat_history']:
+        st.write(f"You: {message['user_input']}")
+        st.write(f"Bot: {message['chatbot_response']}")
