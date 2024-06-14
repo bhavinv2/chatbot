@@ -1,0 +1,23 @@
+# Use the official Python base image
+FROM python:3.9-slim
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy the current directory contents into the container at /app
+COPY . /app
+
+# Copy the service account key (if required)
+COPY numeric-ion-425514-k6-2d41d3d8df72.json /tmp/service-account.json
+
+# Install the Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Set the GOOGLE_APPLICATION_CREDENTIALS environment variable
+ENV GOOGLE_APPLICATION_CREDENTIALS=/tmp/service-account.json
+
+# Expose port 8080 to the outside world
+EXPOSE 8080
+
+# Run streamlit_app.py when the container launches
+CMD ["streamlit", "run", "--server.port", "8080", "streamlit_app.py"]
